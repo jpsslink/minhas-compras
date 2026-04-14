@@ -71,8 +71,8 @@ body {
 .sync-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--muted); flex-shrink: 0; }
 .sync-dot.ok { background: #10B981; }
 .sync-dot.err { background: #EF4444; }
-.sync-dot.loading { background: #F59E0B; animation: pulse 1s infinite; }
-@keyframes pulse { 0%,100%{opacity:1} 50%{opacity:.3} }
+.sync-dot.loading { background: transparent; border: 2px solid #F59E0B; border-top-color: transparent; animation: spin 0.7s linear infinite; }
+@keyframes spin { to { transform: rotate(360deg); } }
 
 /* OVERLAY */
 .overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.65); z-index: 100; align-items: flex-end; justify-content: center; }
