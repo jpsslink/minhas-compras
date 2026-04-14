@@ -204,6 +204,10 @@ body {
       </div>
     </div>
     <div class="field">
+      <label>Codigo de rastreio</label>
+      <input id="f-rastreio" type="text" placeholder="AA123456789BR" style="text-transform:uppercase" oninput="this.value=this.value.toUpperCase()">
+    </div>
+    <div class="field">
       <label>Link do produto</label>
       <input id="f-link" type="url" placeholder="https://...">
     </div>
@@ -269,11 +273,23 @@ function rawValue(v) {
   return parseFloat(String(v).replace("R$ ","").replace(/\./g,"").replace(",",".")) || 0;
 }
 
+// ---------- PRICE FORMATTER ----------
+function fmtPrice(v) {
+  if (!v && v !== 0) return "";
+  if (String(v).indexOf("R$") !== -1) return String(v);
+  var n = parseFloat(String(v).replace(",","."));
+  if (isNaN(n)) return String(v);
+  return "R$ " + n.toFixed(2).replace(".",",").replace(/\B(?=(\d{3})+(?!\d))/g,".");
+}
+
 // ---------- DATE HELPERS ----------
 function fmtDate(d) {
   if (!d) return "";
-  var p = d.split("-");
-  return p[2]+"/"+p[1]+"/"+p[0];
+  var iso = /^(\d{4})-(\d{2})-(\d{2})/.exec(d);
+  if (iso) return iso[3]+"/"+iso[2]+"/"+iso[1];
+  var dt = new Date(d);
+  if (!isNaN(dt)) return dt.toLocaleDateString("pt-BR", {day:"2-digit",month:"2-digit",year:"numeric",timeZone:"UTC"});
+  return d;
 }
 function fmtRange(de, ate) {
   if (!de && !ate) return "";
@@ -410,13 +426,14 @@ function render() {
           '</div>'+
           '<div class="card-name">'+esc(c.nome)+'</div>'+
           '<div class="card-info">'+
-            (c.preco?'<span class="card-price">'+esc(c.preco)+'</span>':'')+
+            (c.preco?'<span class="card-price">'+esc(fmtPrice(c.preco))+'</span>':'')+
             (dateRange?'<span class="card-date'+(late?" late":"")+'">&#128197; '+esc(dateRange)+'</span>':'')+
           '</div>'+
         '</div>'+
         '<button class="status-btn" style="background:'+st.bg+';color:'+st.color+'" onclick="cycleStatus(\''+c.id+'\')">'+st.icon+' '+st.label+'</button>'+
       '</div>'+
       '<div class="card-actions">'+
+        (c.rastreio?'<a class="card-link" href="https://rastreamento.correios.com.br/app/index.php?objeto='+esc(c.rastreio)+'" target="_blank">&#128230; '+esc(c.rastreio)+'</a>':'')+
         (c.link?'<a class="card-link" href="'+esc(c.link)+'" target="_blank">&#128279; Ver</a>':'')+
         '<div class="spacer"></div>'+
         '<button class="btn-edit" onclick="openEdit(\''+c.id+'\')">&#9998; Editar</button>'+
@@ -437,6 +454,7 @@ function openForm() {
   document.getElementById("f-status").value = "aguardando";
   document.getElementById("f-data-de").value = "";
   document.getElementById("f-data-ate").value = "";
+  document.getElementById("f-rastreio").value = "";
   document.getElementById("f-link").value = "";
   document.getElementById("overlay").classList.add("open");
 }
@@ -453,6 +471,7 @@ function openEdit(id) {
   document.getElementById("f-status").value   = c.status;
   document.getElementById("f-data-de").value  = c.dataDe || "";
   document.getElementById("f-data-ate").value = c.dataAte || "";
+  document.getElementById("f-rastreio").value = c.rastreio || "";
   document.getElementById("f-link").value     = c.link || "";
   document.getElementById("overlay").classList.add("open");
 }
@@ -473,6 +492,7 @@ function saveItem() {
     status: document.getElementById("f-status").value,
     dataDe: document.getElementById("f-data-de").value,
     dataAte: document.getElementById("f-data-ate").value,
+    rastreio: document.getElementById("f-rastreio").value.trim(),
     link: document.getElementById("f-link").value.trim()
   };
 
@@ -495,7 +515,7 @@ function cycleStatus(id) {
   var next = ORDER[(ORDER.indexOf(c.status)+1) % ORDER.length];
   compras = compras.map(function(x){
     if (String(x.id)!==String(id)) return x;
-    return { id:x.id,nome:x.nome,preco:x.preco,loja:x.loja,status:next,dataDe:x.dataDe,dataAte:x.dataAte,link:x.link };
+    return { id:x.id,nome:x.nome,preco:x.preco,loja:x.loja,status:next,dataDe:x.dataDe,dataAte:x.dataAte,rastreio:x.rastreio,link:x.link };
   });
   render();
   apiCycleStatus(id, next);
