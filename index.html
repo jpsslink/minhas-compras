@@ -68,11 +68,13 @@ body {
 
 /* sync indicator */
 .sync { display: flex; align-items: center; gap: 6px; font-size: 11px; color: var(--muted); padding: 6px 16px; }
-.sync-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--muted); flex-shrink: 0; }
-.sync-dot.ok { background: #10B981; }
+.sync-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--muted); flex-shrink: 0; }
+.sync-dot.ok  { background: #10B981; }
 .sync-dot.err { background: #EF4444; }
-.sync-dot.loading { background: transparent; border: 2px solid #F59E0B; border-top-color: transparent; animation: spin 0.7s linear infinite; }
-@keyframes spin { to { transform: rotate(360deg); } }
+.sync-spinner { flex-shrink: 0; animation: rotate 1s linear infinite; }
+.sync-spinner circle { fill: none; stroke: #F59E0B; stroke-width: 2; stroke-linecap: round; stroke-dasharray: 20 80; stroke-dashoffset: 0; animation: dash 1.5s ease-in-out infinite; }
+@keyframes rotate { to { transform: rotate(360deg); } }
+@keyframes dash { 0% { stroke-dasharray: 1 99; stroke-dashoffset: 0; } 50% { stroke-dasharray: 60 40; stroke-dashoffset: -20; } 100% { stroke-dasharray: 1 99; stroke-dashoffset: -99; } }
 
 /* OVERLAY */
 .overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.65); z-index: 100; align-items: flex-end; justify-content: center; }
@@ -314,8 +316,17 @@ function esc(s) {
 function setSyncStatus(state, msg) {
   var dot = document.getElementById("sync-dot");
   var txt = document.getElementById("sync-msg");
-  dot.className = "sync-dot " + state;
   txt.textContent = msg;
+  if (state === "loading") {
+    dot.outerHTML = '<svg id="sync-dot" class="sync-spinner" width="14" height="14" viewBox="0 0 32 32"><circle cx="16" cy="16" r="12"/></svg>';
+  } else {
+    var el = document.getElementById("sync-dot");
+    if (el.tagName === "svg" || el.tagName === "SVG") {
+      el.outerHTML = '<div id="sync-dot" class="sync-dot ' + state + '"></div>';
+    } else {
+      el.className = "sync-dot " + state;
+    }
+  }
 }
 
 // ---------- GOOGLE SHEETS API ----------
