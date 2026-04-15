@@ -28,10 +28,16 @@ body {
 .header-top { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; }
 .header-title { font-size: 19px; font-weight: 700; }
 .header-sub { font-size: 12px; color: var(--muted); margin-top: 2px; }
-.btn-add {
-  background: var(--accent); color: #fff; border: none; border-radius: 12px;
-  padding: 10px 16px; font-size: 14px; font-weight: 600; cursor: pointer; font-family: inherit;
+.fab {
+  position: fixed; bottom: 28px; width: 56px; height: 56px;
+  border-radius: 50%; border: none; cursor: pointer; font-family: inherit;
+  display: flex; align-items: center; justify-content: center;
+  box-shadow: 0 4px 16px rgba(0,0,0,0.4); z-index: 50;
+  transition: transform 0.15s, opacity 0.15s; -webkit-tap-highlight-color: transparent;
 }
+.fab:active { transform: scale(0.93); opacity: 0.85; }
+.fab-add  { right: 20px; background: var(--accent); color: #fff; font-size: 26px; font-weight: 300; line-height: 1; }
+.btn-cfg  { background: var(--border); color: var(--muted); border: none; border-radius: 10px; width: 38px; height: 38px; cursor: pointer; font-size: 20px; font-family: inherit; display: flex; align-items: center; justify-content: center; }
 .filters { display: flex; gap: 8px; overflow-x: auto; padding-bottom: 14px; scrollbar-width: none; }
 .filters::-webkit-scrollbar { display: none; }
 .tab {
@@ -56,10 +62,22 @@ body {
 .card-price { font-size: 15px; font-weight: 700; color: var(--cyan); font-family: monospace; }
 .card-date { font-size: 12px; color: var(--muted); }
 .card-date.late { color: #FCA5A5; }
-.status-btn {
+.status-badge {
   border: none; border-radius: 20px; padding: 6px 12px; font-size: 12px;
-  font-weight: 600; cursor: pointer; font-family: inherit; white-space: nowrap; flex-shrink: 0;
+  font-weight: 600; font-family: inherit; white-space: nowrap; flex-shrink: 0;
+  cursor: default; user-select: none;
 }
+.status-steps { display: flex; gap: 6px; margin-top: 12px; padding-top: 12px; border-top: 1px solid var(--border); }
+.step-btn {
+  flex: 1; background: transparent; border: 1.5px solid var(--border);
+  border-radius: 10px; padding: 9px 4px; cursor: pointer; font-family: inherit;
+  display: flex; flex-direction: column; align-items: center; gap: 3px;
+  transition: opacity 0.15s, transform 0.1s; -webkit-tap-highlight-color: transparent;
+}
+.step-btn:active { opacity: 0.75; transform: scale(0.97); }
+.step-btn .step-icon { font-size: 15px; line-height: 1; }
+.step-btn .step-lbl { font-size: 10px; font-weight: 600; color: var(--muted); }
+.step-btn.current .step-lbl { color: inherit; }
 .card-actions {
   display: flex; gap: 8px; margin-top: 12px;
   border-top: 1px solid var(--border); padding-top: 12px; align-items: center;
@@ -136,10 +154,7 @@ body {
       <div class="header-title">&#128717; Minhas Compras</div>
       <div class="header-sub" id="subtitle">0 itens</div>
     </div>
-    <div style="display:flex;gap:8px">
-      <button class="btn-add" style="background:var(--border);color:var(--muted)" onclick="openConfig()" title="Configurar planilha">&#9881;</button>
-      <button class="btn-add" onclick="openForm()">+ Adicionar</button>
-    </div>
+    <button class="btn-cfg" onclick="openConfig()" title="Configurar planilha">&#9881;</button>
   </div>
   <div class="filters">
     <button class="tab active" data-filter="todas"      onclick="setFilter('todas')">Todas <span id="c-todas"></span></button>
@@ -254,6 +269,9 @@ body {
     <button class="btn-save" onclick="saveConfig()">Salvar e conectar</button>
   </div>
 </div>
+
+<!-- FAB -->
+<button class="fab fab-add" onclick="openForm()" title="Adicionar compra">+</button>
 
 <!-- Confirm Delete -->
 <div class="confirm-overlay" id="confirm-overlay">
@@ -460,7 +478,17 @@ function render() {
             (dateRange?'<span class="card-date'+(late?" late":"")+'">&#128197; '+esc(dateRange)+'</span>':'')+
           '</div>'+
         '</div>'+
-        '<button class="status-btn" style="background:'+st.bg+';color:'+st.color+'" onclick="cycleStatus(\''+c.id+'\')">'+st.icon+' '+st.label+'</button>'+
+        '<span class="status-badge" style="background:'+st.bg+';color:'+st.color+'">'+st.icon+' '+st.label+'</span>'+
+      '</div>'+
+      '<div class="status-steps">'+
+        ORDER.map(function(s){
+          var si = STATUS[s]; var cur = c.status===s;
+          var sty = cur?'style="background:'+si.bg+';color:'+si.color+';border-color:'+si.color+'"':'';
+          return '<button class="step-btn'+(cur?' current':'')+'" '+sty+' onclick="setStatus(\''+c.id+'\',\''+s+'\')">'+
+            '<span class="step-icon">'+si.icon+'</span>'+
+            '<span class="step-lbl">'+si.label+'</span>'+
+          '</button>';
+        }).join('')+
       '</div>'+
       '<div class="card-actions">'+
         (c.rastreio?'<a class="card-link" href="https://rastreamento.correios.com.br/app/index.php?objeto='+esc(c.rastreio)+'" target="_blank">&#128230; '+esc(c.rastreio)+'</a>':'')+
@@ -539,16 +567,15 @@ function saveItem() {
 }
 
 // ---------- STATUS ----------
-function cycleStatus(id) {
+function setStatus(id, status) {
   var c = compras.find(function(x){ return String(x.id)===String(id); });
-  if (!c) return;
-  var next = ORDER[(ORDER.indexOf(c.status)+1) % ORDER.length];
+  if (!c || c.status === status) return;
   compras = compras.map(function(x){
     if (String(x.id)!==String(id)) return x;
-    return { id:x.id,nome:x.nome,preco:x.preco,loja:x.loja,status:next,dataDe:x.dataDe,dataAte:x.dataAte,rastreio:x.rastreio,link:x.link };
+    return { id:x.id,nome:x.nome,preco:x.preco,loja:x.loja,status:status,dataDe:x.dataDe,dataAte:x.dataAte,rastreio:x.rastreio,link:x.link };
   });
   render();
-  apiCycleStatus(id, next);
+  apiCycleStatus(id, status);
 }
 
 // ---------- DELETE ----------
