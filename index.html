@@ -63,21 +63,42 @@ body {
 .card-date { font-size: 12px; color: var(--muted); }
 .card-date.late { color: #FCA5A5; }
 .status-badge {
-  border: none; border-radius: 20px; padding: 6px 12px; font-size: 12px;
+  border: none; border-radius: 20px; padding: 6px 8px 6px 12px; font-size: 12px;
   font-weight: 600; font-family: inherit; white-space: nowrap; flex-shrink: 0;
-  cursor: default; user-select: none;
+  cursor: pointer; display: flex; align-items: center; gap: 5px;
+  transition: opacity 0.15s; -webkit-tap-highlight-color: transparent;
 }
-.status-steps { display: flex; gap: 6px; margin-top: 12px; padding-top: 12px; border-top: 1px solid var(--border); }
-.step-btn {
-  flex: 1; background: transparent; border: 1.5px solid var(--border);
-  border-radius: 10px; padding: 9px 4px; cursor: pointer; font-family: inherit;
-  display: flex; flex-direction: column; align-items: center; gap: 3px;
-  transition: opacity 0.15s, transform 0.1s; -webkit-tap-highlight-color: transparent;
+.status-badge:active { opacity: 0.7; }
+.status-badge-chevron { font-size: 11px; opacity: 0.65; }
+/* Status bottom sheet */
+.sheet-backdrop {
+  display: none; position: fixed; inset: 0;
+  background: rgba(0,0,0,0.55); z-index: 150;
 }
-.step-btn:active { opacity: 0.75; transform: scale(0.97); }
-.step-btn .step-icon { font-size: 15px; line-height: 1; }
-.step-btn .step-lbl { font-size: 10px; font-weight: 600; color: var(--muted); }
-.step-btn.current .step-lbl { color: inherit; }
+.sheet-backdrop.open { display: block; }
+.status-sheet {
+  position: fixed; bottom: 0; left: 0; right: 0; z-index: 151;
+  background: var(--surface); border-radius: 20px 20px 0 0;
+  border: 1px solid var(--border); border-bottom: none;
+  padding-bottom: 44px;
+  transform: translateY(100%);
+  transition: transform 0.28s cubic-bezier(0.32, 0.72, 0, 1);
+}
+.status-sheet.open { transform: translateY(0); }
+.sheet-handle { width: 36px; height: 4px; background: var(--border); border-radius: 2px; margin: 12px auto 0; }
+.sheet-title { font-size: 12px; font-weight: 700; color: var(--muted); text-align: center; padding: 14px 16px 6px; text-transform: uppercase; letter-spacing: 0.8px; }
+.sheet-option {
+  display: flex; align-items: center; gap: 14px;
+  padding: 16px 24px; cursor: pointer; border: none;
+  background: none; width: 100%; font-family: inherit; text-align: left;
+  -webkit-tap-highlight-color: transparent; transition: background 0.1s;
+}
+.sheet-option:active { background: rgba(255,255,255,0.04); }
+.sheet-option.current { background: rgba(99,102,241,0.08); }
+.sheet-option-icon { font-size: 22px; width: 30px; text-align: center; flex-shrink: 0; }
+.sheet-option-label { flex: 1; font-size: 16px; font-weight: 500; color: var(--text); }
+.sheet-option.current .sheet-option-label { color: var(--accent); font-weight: 700; }
+.sheet-option-check { font-size: 16px; color: var(--accent); min-width: 20px; text-align: right; }
 .card-actions {
   display: flex; gap: 8px; margin-top: 12px;
   border-top: 1px solid var(--border); padding-top: 12px; align-items: center;
@@ -268,6 +289,14 @@ body {
     </div>
     <button class="btn-save" onclick="saveConfig()">Salvar e conectar</button>
   </div>
+</div>
+
+<!-- Status Sheet -->
+<div class="sheet-backdrop" id="sheet-backdrop" onclick="closeStatusSheet()"></div>
+<div class="status-sheet" id="status-sheet">
+  <div class="sheet-handle"></div>
+  <div class="sheet-title">Alterar status</div>
+  <div id="sheet-options"></div>
 </div>
 
 <!-- FAB -->
@@ -478,17 +507,9 @@ function render() {
             (dateRange?'<span class="card-date'+(late?" late":"")+'">&#128197; '+esc(dateRange)+'</span>':'')+
           '</div>'+
         '</div>'+
-        '<span class="status-badge" style="background:'+st.bg+';color:'+st.color+'">'+st.icon+' '+st.label+'</span>'+
-      '</div>'+
-      '<div class="status-steps">'+
-        ORDER.map(function(s){
-          var si = STATUS[s]; var cur = c.status===s;
-          var sty = cur?'style="background:'+si.bg+';color:'+si.color+';border-color:'+si.color+'"':'';
-          return '<button class="step-btn'+(cur?' current':'')+'" '+sty+' onclick="setStatus(\''+c.id+'\',\''+s+'\')">'+
-            '<span class="step-icon">'+si.icon+'</span>'+
-            '<span class="step-lbl">'+si.label+'</span>'+
-          '</button>';
-        }).join('')+
+        '<button class="status-badge" style="background:'+st.bg+';color:'+st.color+'" onclick="openStatusSheet(\''+c.id+'\')">'+
+          st.icon+' '+st.label+'<span class="status-badge-chevron">›</span>'+
+        '</button>'+
       '</div>'+
       '<div class="card-actions">'+
         (c.rastreio?'<a class="card-link" href="https://rastreamento.correios.com.br/app/index.php?objeto='+esc(c.rastreio)+'" target="_blank">&#128230; '+esc(c.rastreio)+'</a>':'')+
@@ -564,6 +585,36 @@ function saveItem() {
   closeForm();
   render();
   apiSave(item);
+}
+
+// ---------- STATUS SHEET ----------
+var sheetTargetId = null;
+
+function openStatusSheet(id) {
+  sheetTargetId = id;
+  var c = compras.find(function(x){ return String(x.id)===String(id); });
+  if (!c) return;
+  document.getElementById('sheet-options').innerHTML = ORDER.map(function(s) {
+    var si = STATUS[s]; var cur = c.status === s;
+    return '<button class="sheet-option'+(cur?' current':'')+'" onclick="pickStatus(\''+s+'\')">'+
+      '<span class="sheet-option-icon">'+si.icon+'</span>'+
+      '<span class="sheet-option-label">'+si.label+'</span>'+
+      '<span class="sheet-option-check">'+(cur?'✓':'')+'</span>'+
+    '</button>';
+  }).join('');
+  document.getElementById('sheet-backdrop').classList.add('open');
+  document.getElementById('status-sheet').classList.add('open');
+}
+
+function closeStatusSheet() {
+  document.getElementById('sheet-backdrop').classList.remove('open');
+  document.getElementById('status-sheet').classList.remove('open');
+  sheetTargetId = null;
+}
+
+function pickStatus(status) {
+  if (sheetTargetId) setStatus(sheetTargetId, status);
+  closeStatusSheet();
 }
 
 // ---------- STATUS ----------
