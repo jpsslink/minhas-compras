@@ -1,13 +1,38 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
-  <rect width="512" height="512" rx="96" fill="#0F172A"/>
-  <g fill="none" stroke="#6366F1" stroke-width="36" stroke-linecap="round" stroke-linejoin="round">
-    <!-- carrinho -->
-    <path d="M80 96h52l60 240h208l44-160H176"/>
-    <!-- rodas -->
-    <circle cx="220" cy="392" r="28" fill="#6366F1" stroke="none"/>
-    <circle cx="348" cy="392" r="28" fill="#6366F1" stroke="none"/>
-  </g>
-  <circle cx="220" cy="392" r="28" fill="#6366F1"/>
-  <circle cx="348" cy="392" r="28" fill="#6366F1"/>
-  <path d="M80 96h52l60 240h208l44-160H176" fill="none" stroke="#6366F1" stroke-width="36" stroke-linecap="round" stroke-linejoin="round"/>
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#4F46E5"/>
+      <stop offset="100%" stop-color="#7C3AED"/>
+    </linearGradient>
+    <linearGradient id="bagFill" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#ffffff" stop-opacity="1"/>
+      <stop offset="100%" stop-color="#EEF2FF" stop-opacity="1"/>
+    </linearGradient>
+    <filter id="shadow" x="-10%" y="-10%" width="120%" height="130%">
+      <feDropShadow dx="0" dy="6" stdDeviation="10" flood-color="#000" flood-opacity="0.25"/>
+    </filter>
+  </defs>
+
+  <!-- Fundo com gradiente e bordas arredondadas -->
+  <rect width="512" height="512" rx="112" fill="url(#bg)"/>
+
+  <!-- Brilho sutil no topo do fundo -->
+  <ellipse cx="200" cy="80" rx="180" ry="80" fill="white" opacity="0.07"/>
+
+  <!-- Alças da sacola (desenhadas antes do corpo para ficarem atrás) -->
+  <path d="M176 198 C176 110 224 110 224 198"
+        fill="none" stroke="white" stroke-width="30" stroke-linecap="round" opacity="0.92"/>
+  <path d="M288 198 C288 110 336 110 336 198"
+        fill="none" stroke="white" stroke-width="30" stroke-linecap="round" opacity="0.92"/>
+
+  <!-- Corpo da sacola com sombra e gradiente -->
+  <rect x="104" y="188" width="304" height="224" rx="28" fill="url(#bagFill)" filter="url(#shadow)"/>
+
+  <!-- Linha de dobra no topo da sacola -->
+  <line x1="124" y1="238" x2="388" y2="238" stroke="#6366F1" stroke-width="3.5" stroke-opacity="0.25"/>
+
+  <!-- Estrelinhas decorativas -->
+  <circle cx="390" cy="130" r="6" fill="white" opacity="0.6"/>
+  <circle cx="410" cy="110" r="4" fill="white" opacity="0.4"/>
+  <circle cx="372" cy="115" r="3" fill="white" opacity="0.5"/>
 </svg>
