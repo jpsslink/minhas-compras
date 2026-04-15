@@ -99,14 +99,25 @@ body {
 .sheet-option-label { flex: 1; font-size: 16px; font-weight: 500; color: var(--text); }
 .sheet-option.current .sheet-option-label { color: var(--accent); font-weight: 700; }
 .sheet-option-check { font-size: 16px; color: var(--accent); min-width: 20px; text-align: right; }
-.card-actions {
-  display: flex; gap: 8px; margin-top: 12px;
-  border-top: 1px solid var(--border); padding-top: 12px; align-items: center;
+.card-menu-btn {
+  background: none; border: none; color: var(--muted); cursor: pointer; font-size: 22px;
+  padding: 0 0 0 10px; line-height: 1; flex-shrink: 0; letter-spacing: 1px;
+  -webkit-tap-highlight-color: transparent;
 }
-.card-link { font-size: 13px; color: var(--accent); text-decoration: none; font-weight: 500; }
-.spacer { flex: 1; }
-.btn-edit { background: none; border: none; cursor: pointer; font-size: 13px; color: var(--muted); font-family: inherit; padding: 4px 6px; }
-.btn-del  { background: none; border: none; cursor: pointer; font-size: 13px; color: #EF4444; font-family: inherit; padding: 4px 6px; }
+.card-footer {
+  display: flex; align-items: center; justify-content: space-between;
+  margin-top: 10px; gap: 8px;
+}
+.card-links { display: flex; gap: 6px; }
+.card-link-icon {
+  display: flex; align-items: center; justify-content: center;
+  width: 32px; height: 32px; border-radius: 8px;
+  background: var(--bg); border: 1px solid var(--border);
+  color: var(--muted); text-decoration: none; font-size: 15px;
+  -webkit-tap-highlight-color: transparent;
+}
+.card-link-icon:active { border-color: var(--accent); color: var(--accent); }
+.sheet-option-danger .sheet-option-label { color: #EF4444; }
 
 /* sync indicator */
 .sync { display: flex; align-items: center; gap: 6px; font-size: 11px; color: var(--muted); padding: 6px 16px; }
@@ -291,12 +302,29 @@ body {
   </div>
 </div>
 
+<!-- Sheets backdrop -->
+<div class="sheet-backdrop" id="sheet-backdrop" onclick="closeAnySheet()"></div>
+
 <!-- Status Sheet -->
-<div class="sheet-backdrop" id="sheet-backdrop" onclick="closeStatusSheet()"></div>
 <div class="status-sheet" id="status-sheet">
   <div class="sheet-handle"></div>
   <div class="sheet-title">Alterar status</div>
   <div id="sheet-options"></div>
+</div>
+
+<!-- Actions Sheet -->
+<div class="status-sheet" id="actions-sheet">
+  <div class="sheet-handle"></div>
+  <div class="sheet-title">Ações</div>
+  <button class="sheet-option" onclick="actionsEdit()">
+    <span class="sheet-option-icon">&#9998;</span>
+    <span class="sheet-option-label">Editar</span>
+  </button>
+  <button class="sheet-option sheet-option-danger" onclick="actionsDelete()">
+    <span class="sheet-option-icon">&#128465;</span>
+    <span class="sheet-option-label">Remover</span>
+    <span class="sheet-option-check"></span>
+  </button>
 </div>
 
 <!-- FAB -->
@@ -507,16 +535,16 @@ function render() {
             (dateRange?'<span class="card-date'+(late?" late":"")+'">&#128197; '+esc(dateRange)+'</span>':'')+
           '</div>'+
         '</div>'+
+        '<button class="card-menu-btn" onclick="openActionsSheet(\''+c.id+'\')">&#8942;</button>'+
+      '</div>'+
+      '<div class="card-footer">'+
         '<button class="status-badge" style="background:'+st.bg+';color:'+st.color+'" onclick="openStatusSheet(\''+c.id+'\')">'+
           st.icon+' '+st.label+'<span class="status-badge-chevron">›</span>'+
         '</button>'+
-      '</div>'+
-      '<div class="card-actions">'+
-        (c.rastreio?'<a class="card-link" href="https://rastreamento.correios.com.br/app/index.php?objeto='+esc(c.rastreio)+'" target="_blank">&#128230; '+esc(c.rastreio)+'</a>':'')+
-        (c.link?'<a class="card-link" href="'+esc(c.link)+'" target="_blank">&#128279; Ver</a>':'')+
-        '<div class="spacer"></div>'+
-        '<button class="btn-edit" onclick="openEdit(\''+c.id+'\')">&#9998; Editar</button>'+
-        '<button class="btn-del"  onclick="askDelete(\''+c.id+'\')">&#128465; Remover</button>'+
+        '<div class="card-links">'+
+          (c.rastreio?'<a class="card-link-icon" href="https://rastreamento.correios.com.br/app/index.php?objeto='+esc(c.rastreio)+'" target="_blank" title="Rastrear">&#128230;</a>':'')+
+          (c.link?'<a class="card-link-icon" href="'+esc(c.link)+'" target="_blank" title="Ver produto">&#128279;</a>':'')+
+        '</div>'+
       '</div>'+
     '</div>';
   }).join("");
@@ -606,15 +634,36 @@ function openStatusSheet(id) {
   document.getElementById('status-sheet').classList.add('open');
 }
 
-function closeStatusSheet() {
+function closeAnySheet() {
   document.getElementById('sheet-backdrop').classList.remove('open');
   document.getElementById('status-sheet').classList.remove('open');
+  document.getElementById('actions-sheet').classList.remove('open');
   sheetTargetId = null;
 }
+function closeStatusSheet() { closeAnySheet(); }
 
 function pickStatus(status) {
-  if (sheetTargetId) setStatus(sheetTargetId, status);
-  closeStatusSheet();
+  var id = sheetTargetId;
+  closeAnySheet();
+  if (id) setStatus(id, status);
+}
+
+function openActionsSheet(id) {
+  sheetTargetId = id;
+  document.getElementById('sheet-backdrop').classList.add('open');
+  document.getElementById('actions-sheet').classList.add('open');
+}
+
+function actionsEdit() {
+  var id = sheetTargetId;
+  closeAnySheet();
+  openEdit(id);
+}
+
+function actionsDelete() {
+  var id = sheetTargetId;
+  closeAnySheet();
+  askDelete(id);
 }
 
 // ---------- STATUS ----------
